@@ -15,9 +15,10 @@ def calibrate_camera(cameraNum):
     rotVecs: rotation vectors (omega)
     transVecs: translation vectors
     '''
-    CHESSBOARD_SIZE = (9,6)
-    #CHESSBOARD_SIZE = (7,4)
-    SQUARE_SIZE = 2.36 #Size of squares in cm
+    #CHESSBOARD_SIZE = (9,6)
+    CHESSBOARD_SIZE = (7,4)
+    #SQUARE_SIZE = 2.36 #Size of squares in cm
+    SQUARE_SIZE = 1
     folderStr = 'calibration_images/' + str(cameraNum) + '/*.jpg'
     #CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_images/*.jpg'))
     CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', folderStr))
@@ -71,7 +72,8 @@ def calibrate_camera(cameraNum):
         if ret:
             objPointsStore.append(objPoints)
 
-            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 300, 0.001)
+            #criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 300, 0.001)
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.01)
             corners2 = cv2.cornerSubPix(greyImg, corners, (11,11), (-1,-1), criteria)
             imgPointsStore.append(corners2)
 
@@ -92,6 +94,7 @@ def calibrate_camera(cameraNum):
     
     #Calibrate camera, K is the intrinsic camera matrix
     ret, K, distCoef, rotVecs, transVecs = cv2.calibrateCamera(objPointsStore, imgPointsStore, (greyImg.shape[1], greyImg.shape[0]), None, None)
+    print("Distance coefficients", distCoef)
 
     #Save calibration data
     calibrationData = {

@@ -19,7 +19,8 @@ def stereo_calibrate(mtx1, dist1, mtx2, dist2, frames_folder):
     F: 3x3 Fundamental matrix
     '''
     CHESSBOARD_SIZE = (7,4)
-    SQUARE_SIZE = 2.36
+    #SQUARE_SIZE = 2.36 #centimeter for now, should use millimeters
+    SQUARE_SIZE = 1
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'stereo_calibration_params'))
 
     #Create output directory
@@ -95,6 +96,30 @@ def stereo_calibrate(mtx1, dist1, mtx2, dist2, frames_folder):
     stereoCalibrationFlags = cv2.CALIB_FIX_INTRINSIC
     ret, camera_matrix1, distCoef1, camera_matrix2, distCoef2, R, T, E, F = cv2.stereoCalibrate(objPointsStore, imgPointsStore_left, imgPointsStore_right, mtx1, dist1, mtx2, dist2, (width, height), criteria=criteria, flags=stereoCalibrationFlags)
     print("Reprojection error: ", str(ret))
+
+    #Save calibration data
+    calibrationData = {
+        'cameraMatrix1' : camera_matrix1,
+        'distortionCoeffs1': distCoef1,
+        'cameraMatrix2': camera_matrix2,
+        'distortionCoeffs2': distCoef2,
+        'reprojectionError': ret,
+        'R_Mat': R,
+        'T_Vec': T,
+        'Essential_Mat': E,
+        'Fundamental_Mat': F
+    }
+    with open(os.path.join(OUTPUT_DIRECTORY, 'stereo_calibration_data.pkl'), 'wb') as f:
+        pickle.dump(calibrationData, f)
+
+    #Save rotation matrix and translation vector as files
+    np.savetxt(os.path.join(OUTPUT_DIRECTORY, 'rotation_matrix.txt'), R)
+    np.savetxt(os.path.join(OUTPUT_DIRECTORY, 'translation_vector.txt'), T)
+    #I will also save these just for debugging but I believe they should be the same as the input matrices
+    np.savetxt(os.path.join(OUTPUT_DIRECTORY, 'camera_matrix1.txt'), camera_matrix1)
+    np.savetxt(os.path.join(OUTPUT_DIRECTORY, 'camera_matrix2.txt'), camera_matrix2)
+    np.savetxt(os.path.join(OUTPUT_DIRECTORY, 'distortion_coefficients1.txt'), distCoef1)
+    np.savetxt(os.path.join(OUTPUT_DIRECTORY, 'distortion_coefficients2.txt'), distCoef2)
     return R, T
 
 
