@@ -6,7 +6,7 @@ import time
 def capture_calibration_images_single_cam(cameraNum):
     #Capture parameters
     CAMERA_ID = cameraNum
-    CHESSBOARD_SIZE = (9,6)
+    CHESSBOARD_SIZE = (6,5)
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_images', str(cameraNum)))
     #press c to capture image
     if not os.path.exists(OUTPUT_DIRECTORY):
@@ -75,4 +75,4 @@ def capture_calibration_images_single_cam(cameraNum):
 
 if __name__ == "__main__":
     capture_calibration_images_single_cam(0)
-    capture_calibration_images_single_cam(2)
+    #capture_calibration_images_single_cam(2)

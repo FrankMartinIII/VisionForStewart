@@ -18,27 +18,39 @@ def stereo_calibrate(mtx1, dist1, mtx2, dist2, frames_folder):
     E: 3x3 essential matrix
     F: 3x3 Fundamental matrix
     '''
-    CHESSBOARD_SIZE = (7,4)
+    CHESSBOARD_SIZE = (6,5)
     #SQUARE_SIZE = 2.36 #centimeter for now, should use millimeters
-    SQUARE_SIZE = 1
+    SQUARE_SIZE = 20
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'stereo_calibration_params'))
 
     #Create output directory
     if not os.path.exists(OUTPUT_DIRECTORY):
         os.makedirs(OUTPUT_DIRECTORY)
-
+    
     # Prepare object points (0,0,0), (1,0,0), (2,0,0) ... (8,5,0)
     objPoints = np.zeros((CHESSBOARD_SIZE[0] * CHESSBOARD_SIZE[1], 3), np.float32)
     objPoints[:, :2] = np.mgrid[0:CHESSBOARD_SIZE[0], 0:CHESSBOARD_SIZE[1]].T.reshape(-1, 2)
 
     #Scale object points by square size for real-world measurements
     objPoints = objPoints * SQUARE_SIZE
-
+    '''
     #Read in synched frames
     images_names = glob.glob(frames_folder)
     images_names = sorted(images_names)
     c1_images_names = images_names[:len(images_names)//2]
     c2_images_names = images_names[len(images_names)//2:]
+    '''
+
+    frames_folder0 = os.path.abspath(os.path.join(frames_folder, 'stereo0/*.jpg'))
+    #frames_folder0 = frames_folder + "/stereo0/*.jpg"
+    print(frames_folder0)
+    #frames_folder1 = frames_folder + "/stereo1/*.jpg"
+    frames_folder1 = os.path.abspath(os.path.join(frames_folder, 'stereo1/*.jpg'))
+    images_names0 = glob.glob(frames_folder0)
+    images_names1 = glob.glob(frames_folder1)
+    c1_images_names = sorted(images_names0)
+    c2_images_names = sorted(images_names1)
+
 
     c1_images = []
     c2_images = []
@@ -124,7 +136,7 @@ def stereo_calibrate(mtx1, dist1, mtx2, dist2, frames_folder):
 
 
 def main():
-    OUTPUT_DIRECTORY_C0 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_params', str(5), 'calibration_data.pkl'))
+    OUTPUT_DIRECTORY_C0 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_params', str(0), 'calibration_data.pkl'))
     with open(OUTPUT_DIRECTORY_C0, 'rb') as f:
         data1 = pickle.load(f)
 
@@ -133,7 +145,7 @@ def main():
     mtx1 = data1['cameraMatrix']
     dist1 = data1['distortionCoeff']
 
-    OUTPUT_DIRECTORY_C1 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_params', str(6), 'calibration_data.pkl'))
+    OUTPUT_DIRECTORY_C1 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_params', str(2), 'calibration_data.pkl'))
     with open(OUTPUT_DIRECTORY_C1, 'rb') as f:
         data2 = pickle.load(f)
 
@@ -142,7 +154,8 @@ def main():
     mtx2 = data2['cameraMatrix']
     dist2 = data2['distortionCoeff']
 
-    CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'FrankCalib/frames/synched/*.png'))
+    #CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'FrankCalib/frames/synched/*.png'))
+    CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_images'))
     R, T = stereo_calibrate(mtx1, dist1, mtx2, dist2, CALIBRATION_IMAGES_PATH)
 if __name__ == "__main__":
     main()

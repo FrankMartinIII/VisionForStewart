@@ -84,8 +84,8 @@ def main():
     print("Translation Vector")
     print(T)
 
-    testL = cv2.imread("testL.png", cv2.IMREAD_GRAYSCALE)
-    testR = cv2.imread("testR.png", cv2.IMREAD_GRAYSCALE)
+    testL = cv2.imread("testL.jpg")
+    testR = cv2.imread("testR.jpg")
     width = testL.shape[1]
     height = testL.shape[0]
     #combining images for display
@@ -100,6 +100,22 @@ def main():
     cv2.imshow("L undist",testLUndist)
     cv2.imshow("R undist",testRUndist)
     cv2.waitKey(0)
+
+    # Example for drawing epipolar lines on rectified images
+    # Assume rectified_img_left and rectified_img_right are your output images
+
+    display_img_left = testLUndist.copy()
+    display_img_right = testRUndist.copy()
+
+    # Draw horizontal lines every 50 pixels
+    for y in range(0, display_img_left.shape[0], 50):
+        cv2.line(display_img_left, (0, y), (display_img_left.shape[1], y), (0, 255, 0), 1) # Green lines
+        cv2.line(display_img_right, (0, y), (display_img_right.shape[1], y), (0, 255, 0), 1)
+
+    cv2.imshow('Rectified Left (with lines)', display_img_left)
+    cv2.imshow('Rectified Right (with lines)', display_img_right)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 
