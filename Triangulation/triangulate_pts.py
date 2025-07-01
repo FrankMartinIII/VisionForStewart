@@ -85,8 +85,8 @@ def triangulate_points(points1_2d, points2_2d, P1, P2):
     return points_3d
 
 def test_Undistortion(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T):
-    testL = cv2.imread("testL.jpg")
-    testR = cv2.imread("testR.jpg")
+    testL = cv2.imread("Im_L_1.png")
+    testR = cv2.imread("Im_R_1.png")
     width = testL.shape[1]
     height = testL.shape[0]
     #combining images for display
@@ -267,7 +267,8 @@ def main():
     print("Translation Vector")
     print(T)
 
-    live_circ_dist_detect(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T)
+    #live_circ_dist_detect(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T)
+    test_Undistortion(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T)
 
 
 

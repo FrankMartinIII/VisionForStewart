@@ -2,8 +2,12 @@ import cv2
 import numpy as np
 
 #Read image
-img = cv2.imread('eyes2.jpg', cv2.IMREAD_COLOR)
+img = cv2.imread('skinAngle.jpg', cv2.IMREAD_COLOR)
 
+img = cv2.resize(img, (0, 0), fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA)
+height = img.shape[0]
+width = img.shape[1]
+print("Image size", width, " x ", height)
 greyimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 #blur using 3x3 kernel
@@ -18,7 +22,7 @@ upper threshold passed to Canny,
 threshold for circle detection positive (smaller should return more circles, but more false positives),
 min radius, max radius
 '''
-detected_circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, 20, param1 = 50, param2 = 70, minRadius = 1)
+detected_circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1, 100, param1 = 100, param2 = 35, minRadius = 1)
 
 print(f"detected_circles shape: {detected_circles.shape}")
 for i, pt in enumerate(detected_circles[0, :]):
