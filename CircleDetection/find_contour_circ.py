@@ -98,6 +98,16 @@ greyimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 #blurred = cv2.blur(greyimg, (3,3))
 blurred = cv2.GaussianBlur(greyimg, (9,9), 2)
 cv2.imshow("Blurred", blurred)
+
+kernel = np.ones((8,8),np.uint8)
+
+#Another try with opening instead
+# Perform closing to remove hair and blur the image
+closing = cv2.morphologyEx(img,cv2.MORPH_OPEN, kernel, iterations = 2)
+blurred = cv2.GaussianBlur(closing, (9,9), 2)
+#blurred = cv2.cvtColor(blurred, cv2.COLOR_BGR2GRAY)
+cv2.imshow("Blurred2", blurred)
+
 edges = cv2.Canny(blurred,0,40, apertureSize=3, L2gradient=True)
 
 
