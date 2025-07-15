@@ -74,5 +74,5 @@ def capture_calibration_images_single_cam(cameraNum):
 
 
 if __name__ == "__main__":
-    capture_calibration_images_single_cam(0)
+    capture_calibration_images_single_cam(1)
     #capture_calibration_images_single_cam(2)

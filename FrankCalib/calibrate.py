@@ -15,10 +15,10 @@ def calibrate_camera(cameraNum):
     rotVecs: rotation vectors (omega)
     transVecs: translation vectors
     '''
-    CHESSBOARD_SIZE = (6,5)
+    CHESSBOARD_SIZE = (8,5)
     #SQUARE_SIZE = 2.36 #Size of squares in cm
-    SQUARE_SIZE = 30
-    folderStr = 'calibration_images/' + str(cameraNum) + '/*.jpg'
+    SQUARE_SIZE = 40
+    folderStr = 'calibration_images/stereo' + str(cameraNum) + '/*.jpg'
     #CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_images/*.jpg'))
     CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', folderStr))
     #CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'FrankCalib/frames/J2/*.png'))
@@ -28,9 +28,9 @@ def calibrate_camera(cameraNum):
     if cameraNum == 5:
         CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'FrankCalib/frames/D2/*.png'))
         CHESSBOARD_SIZE = (7,4)
-    if cameraNum == 6:
-        CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'FrankCalib/frames/J2/*.png'))
-        CHESSBOARD_SIZE = (7,4)
+    #if cameraNum == 6:
+    #    CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'FrankCalib/frames/J2/*.png'))
+    #    CHESSBOARD_SIZE = (7,4)
     if cameraNum == 7:
         CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_images/kaggle0/*.png'))
         CHESSBOARD_SIZE = (11,7)
@@ -120,7 +120,7 @@ def calibrate_camera(cameraNum):
     return ret, K, distCoef, rotVecs, transVecs
 
 def main():
-    calibrate_camera(7)
-    calibrate_camera(8)
+    calibrate_camera(0)
+    calibrate_camera(1)
 if __name__ == "__main__":
     main()

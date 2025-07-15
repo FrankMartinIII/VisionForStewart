@@ -85,8 +85,8 @@ def triangulate_points(points1_2d, points2_2d, P1, P2):
     return points_3d
 
 def test_Undistortion(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T):
-    testL = cv2.imread("Im_L_1.png")
-    testR = cv2.imread("Im_R_1.png")
+    testL = cv2.imread("test2L.jpg")
+    testR = cv2.imread("test2R.jpg")
     width = testL.shape[1]
     height = testL.shape[0]
     #combining images for display
@@ -119,19 +119,19 @@ def test_Undistortion(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T):
     cv2.destroyAllWindows()
 
 def live_circ_dist_detect(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T):
-    IMAGE_SIZE = (1280, 720)
+    IMAGE_SIZE = (640, 480)
 
     map1x, map1y, map2x, map2y, P1, P2 = get_undistort_rectification_maps(
         cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T, IMAGE_SIZE
     )
 
-    capLeft = cv2.VideoCapture(0)
-    capRight = cv2.VideoCapture(2)
+    capLeft = cv2.VideoCapture(4)
+    capRight = cv2.VideoCapture(6)
 
-    capLeft.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_SIZE[0])
-    capLeft.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_SIZE[1])
-    capRight.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_SIZE[0])
-    capRight.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_SIZE[1])
+    #capLeft.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_SIZE[0])
+    #capLeft.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_SIZE[1])
+    #capRight.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_SIZE[0])
+    #capRight.set(cv2.CAP_PROP_FRAME_WIDTH, IMAGE_SIZE[1])
     
     while True:
         retL, frameL = capLeft.read()
@@ -267,8 +267,8 @@ def main():
     print("Translation Vector")
     print(T)
 
-    #live_circ_dist_detect(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T)
-    test_Undistortion(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T)
+    live_circ_dist_detect(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T)
+    #test_Undistortion(cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T)
 
 
 

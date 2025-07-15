@@ -18,10 +18,10 @@ def stereo_calibrate(mtx1, dist1, mtx2, dist2, frames_folder):
     E: 3x3 essential matrix
     F: 3x3 Fundamental matrix
     '''
-    #CHESSBOARD_SIZE = (6,5)
-    CHESSBOARD_SIZE = (11,7)
+    CHESSBOARD_SIZE = (8,5)
+    #CHESSBOARD_SIZE = (11,7)
     #SQUARE_SIZE = 2.36 #centimeter for now, should use millimeters
-    SQUARE_SIZE = 30
+    SQUARE_SIZE = 40
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'stereo_calibration_params'))
 
     #Create output directory
@@ -43,12 +43,12 @@ def stereo_calibrate(mtx1, dist1, mtx2, dist2, frames_folder):
     '''
 
     #frames_folder0 = os.path.abspath(os.path.join(frames_folder, 'stereo0/*.jpg'))
-    frames_folder0 = os.path.abspath(os.path.join(frames_folder, 'kaggle0/*.png'))
+    frames_folder0 = os.path.abspath(os.path.join(frames_folder, 'stereo0/*.jpg'))
     #frames_folder0 = frames_folder + "/stereo0/*.jpg"
     print(frames_folder0)
     #frames_folder1 = frames_folder + "/stereo1/*.jpg"
     #frames_folder1 = os.path.abspath(os.path.join(frames_folder, 'stereo1/*.jpg'))
-    frames_folder1 = os.path.abspath(os.path.join(frames_folder, 'kaggle1/*.png'))
+    frames_folder1 = os.path.abspath(os.path.join(frames_folder, 'stereo1/*.jpg'))
     images_names0 = glob.glob(frames_folder0)
     images_names1 = glob.glob(frames_folder1)
     c1_images_names = sorted(images_names0)
@@ -143,7 +143,7 @@ def stereo_calibrate(mtx1, dist1, mtx2, dist2, frames_folder):
 
 
 def main():
-    OUTPUT_DIRECTORY_C0 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_params', str(7), 'calibration_data.pkl'))
+    OUTPUT_DIRECTORY_C0 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_params', str(0), 'calibration_data.pkl'))
     with open(OUTPUT_DIRECTORY_C0, 'rb') as f:
         data1 = pickle.load(f)
 
@@ -152,7 +152,7 @@ def main():
     mtx1 = data1['cameraMatrix']
     dist1 = data1['distortionCoeff']
 
-    OUTPUT_DIRECTORY_C1 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_params', str(8), 'calibration_data.pkl'))
+    OUTPUT_DIRECTORY_C1 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_params', str(1), 'calibration_data.pkl'))
     with open(OUTPUT_DIRECTORY_C1, 'rb') as f:
         data2 = pickle.load(f)
 

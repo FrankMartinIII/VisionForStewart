@@ -6,7 +6,7 @@ import sys
 def capture_stereo_calib_images(camNum0, camNum1):
     OUTPUT_DIRECTORY0 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_images', 'stereo0'))
     OUTPUT_DIRECTORY1 = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_images', 'stereo1'))
-    CHESSBOARD_SIZE = (6,5)
+    CHESSBOARD_SIZE = (8,5)
     if not os.path.exists(OUTPUT_DIRECTORY0):
         os.makedirs(OUTPUT_DIRECTORY0)
     if not os.path.exists(OUTPUT_DIRECTORY1):
@@ -96,4 +96,4 @@ def capture_stereo_calib_images(camNum0, camNum1):
     print("Captured ", imgCounter, " images")
 
 if __name__ == "__main__":
-    capture_stereo_calib_images(0,2)
+    capture_stereo_calib_images(4,6)
