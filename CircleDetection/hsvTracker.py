@@ -5,7 +5,7 @@ def nothing(x):
     pass
 
 # Load image
-image = cv2.imread('greenSkin1.jpg')
+image = cv2.imread('sharpieAndHigh2Matched.jpg')
 
 # Create a window
 cv2.namedWindow('image')
