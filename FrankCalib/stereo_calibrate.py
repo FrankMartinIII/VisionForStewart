@@ -18,10 +18,10 @@ def stereo_calibrate(mtx1, dist1, mtx2, dist2, frames_folder):
     E: 3x3 essential matrix
     F: 3x3 Fundamental matrix
     '''
-    CHESSBOARD_SIZE = (8,5)
+    CHESSBOARD_SIZE = (10,7)
     #CHESSBOARD_SIZE = (11,7)
     #SQUARE_SIZE = 2.36 #centimeter for now, should use millimeters
-    SQUARE_SIZE = 40
+    SQUARE_SIZE = 15
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'stereo_calibration_params'))
 
     #Create output directory

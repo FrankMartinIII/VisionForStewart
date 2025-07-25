@@ -14,6 +14,7 @@ import contour_det_lib
 def display_SideBySide(img1, img2, title):
     combined = np.hstack((img1, img2))
     cv2.imshow(title, combined)
+    cv2.waitKey(0)
 
 def histogram_match(img1, img2):
     # Match img2 colors to img1 and return the shifted img2
@@ -44,6 +45,18 @@ def image_processing(img):
     blurred = cv2.GaussianBlur(greyimg, (9,9), 0)
     edges = cv2.Canny(blurred,0,40, apertureSize=3, L2gradient=True)
     return edges, blurred
+
+def find_closest_ellipse_by_y(reference_ellipse, candidate_ellipses, y_thresh=90):
+    ref_y = reference_ellipse[0][1]  # y-coordinate of the center
+    min_dist = float('inf')
+    best_match = None
+    for e in candidate_ellipses:
+        y = e[0][1]
+        dy = abs(ref_y - y)
+        if dy < min_dist and dy < y_thresh:
+            min_dist = dy
+            best_match = e
+    return best_match
 
 def get_ellipse_mask(image_shape, ellipse, tighten=False):
     mask = np.zeros(image_shape[:2], dtype=np.uint8)
@@ -133,8 +146,8 @@ def draw_matches_with_distances(img1, kp1, img2, kp2, matches, max_distance=None
 def main():
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'stereo_calibration_params', 'stereo_calibration_data.pkl'))
     cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R_Mat, T_Vec = triangulate_pts.read_params(OUTPUT_DIRECTORY)
-    img1 = cv2.imread("sharpieAndHigh1.jpg")
-    img2 = cv2.imread("sharpieAndHigh2.jpg")
+    img1 = cv2.imread("stereo_images/70L.png")
+    img2 = cv2.imread("stereo_images/70R.png")
     display_SideBySide(img1, img2, "Initial images")
 
     #Step 0: Rectify and undistort
@@ -144,10 +157,12 @@ def main():
     LUndist, RUndist = triangulate_pts.undistort_images(img1, img2, map1x, map1y, map2x, map2y)
     display_SideBySide(LUndist, RUndist, "Undistorted images")
     #For now I am not using the undistorted images because I am not sure if these images were captured perfectly and too much is cropped.
-    #img1 = LUndist
-    #img2 = RUndist
+    img1 = LUndist
+    img2 = RUndist
+    img2copy = img2.copy()
 
     #Step 1: Perform histogram matching
+    #Maybe I should try a different method for this b/c imgs can get washed out if not much contrast
     img2 = histogram_match(img1, img2)
     display_SideBySide(img1, img2, "Post histogram matching")
 
@@ -197,17 +212,26 @@ def main():
     ellipses2 = contour_det_lib.sort_ellipses_by_size(ellipses2)
     #contour_det_lib.display_ellipses(ellipses1, ellipseContImg1)
     #contour_det_lib.display_ellipses(ellipses2, ellipseContImg2)
-    cv2.ellipse(ellipseContImg1, ellipses1[0], (0, 0, 255), 2)
-    cv2.ellipse(ellipseContImg2, ellipses2[0], (0, 0, 255), 2)
+    cv2.ellipse(ellipseContImg1, ellipses1[0], (0, 255, 255), 2)
+    cv2.ellipse(ellipseContImg2, ellipses2[0], (0, 255, 255), 2)
+    display_SideBySide(ellipseContImg1, ellipseContImg2, "Ellipses")
+    #Trying a new way of ellipse matching on epipolar lines
+    ellipse1 = ellipses1[0]
+    ellipse2 = find_closest_ellipse_by_y(ellipse1, ellipses2)
+    if ellipse2 is None:
+        print("No matching ellipse found in img2")
+        return
+    cv2.ellipse(ellipseContImg1, ellipse1, (0, 0, 255), 2)
+    cv2.ellipse(ellipseContImg2, ellipse2, (0, 0, 255), 2)
     display_SideBySide(ellipseContImg1, ellipseContImg2, "Ellipses")
 
     #Step 4: Mask out just the area in the ellipse
     width = ellipseContImg1.shape[1]
     height = ellipseContImg1.shape[0]
-    ellipse_mask1 = get_ellipse_mask((height, width), ellipses1[0], tighten=False)
+    ellipse_mask1 = get_ellipse_mask((height, width), ellipse1, tighten=False)
     width = ellipseContImg2.shape[1]
     height = ellipseContImg2.shape[0]
-    ellipse_mask2 = get_ellipse_mask((height, width), ellipses2[0], tighten=False)
+    ellipse_mask2 = get_ellipse_mask((height, width), ellipse2, tighten=False)
     
     #Step 5: Image preprocessing for SIFT
     '''
@@ -217,6 +241,8 @@ def main():
     '''
     grey1 = clahe_preprocess(img1)
     grey2 = clahe_preprocess(img2)
+    #RIGHT HERE I AM DOING SIFT ON THE RECTIFIE IMG2 BEFORE HIST EQ
+    grey2 = clahe_preprocess(img2copy)
     display_SideBySide(grey1, grey2, "CLAHE")
     #Step 6: Perform SIFT inside the ellipses
     kp1, desc1 = detect_and_compute_sift(grey1, ellipse_mask1)
@@ -227,18 +253,20 @@ def main():
 
     #Step 7: Feature matching
     matches = match_features(desc1, desc2)
+    print(matches)
     top_matches = matches[0:10]
     matched_img = draw_matches_with_distances(img1, kp1, img2, kp2, matches)
     cv2.imshow("Matches", matched_img)
 
-
     #Step 8: Triangulate the points
     # Get matched keypoint coordinates
-    pts1 = np.float32([kp1[m.queryIdx].pt for m in matches])
-    pts2 = np.float32([kp2[m.trainIdx].pt for m in matches])
+    pts1 = np.float32([kp1[m.queryIdx].pt for m in top_matches])
+    pts2 = np.float32([kp2[m.trainIdx].pt for m in top_matches])
     # Use your triangulation function
     pts3d = triangulate_pts.triangulate_points(pts1, pts2, P1, P2)
     print(pts3d)
+    for pt3d, match in zip(pts3d, top_matches):
+        print(f"3D Point: {pt3d}, Match distance: {match.distance:.2f}")
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()

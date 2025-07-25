@@ -50,7 +50,7 @@ def get_undistort_rectification_maps(cameraMatrix1, distCoeffs1, cameraMatrix2, 
     validPixROI2	Optional output rectangles inside the rectified images where all the pixels are valid. If alpha=0 , the ROIs cover the whole images. Otherwise, they are likely to be smaller 
     '''
     #Compute rectification transforms, I didn't specify an alpha right now, may not be needed in our case
-    R1, R2, P1, P2, Q, roil1, roil2 = cv2.stereoRectify(cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, img_size, R_Matrix, T_Vec, alpha=0)
+    R1, R2, P1, P2, Q, roil1, roil2 = cv2.stereoRectify(cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, img_size, R_Matrix, T_Vec, alpha=-1)
 
     #Last argument is an int for type of the first output map, but idk what that means
     map1x, map1y = cv2.initUndistortRectifyMap(cameraMatrix1, distCoeffs1, R1, P1, img_size, cv2.CV_32FC1)
