@@ -79,7 +79,7 @@ def clahe_preprocess(img):
     grey_eq = clahe.apply(grey)
     return grey_eq
 
-def match_features(descriptors1, descriptors2, ratio_threshold=0.75):
+def match_features(descriptors1, descriptors2, ratio_threshold=0.75, distance_threshold=190):
     #Using brute force matcher https://docs.opencv.org/4.x/dc/dc3/tutorial_py_matcher.html reference D. Lowe paper for this
     bf = cv2.BFMatcher()
     matches = bf.knnMatch(descriptors1, descriptors2, k=2)
@@ -89,6 +89,8 @@ def match_features(descriptors1, descriptors2, ratio_threshold=0.75):
     for m,n in matches:
         if m.distance < 0.75*n.distance:
             good_matches.append(m)
+    #Eliminate bad matches below distance threshold (max in SIFT is 300 I think)
+    good_matches = [m for m in good_matches if m.distance < distance_threshold]
     #Sort by match quality
     good_matches = sorted(good_matches, key=lambda x: x.distance)
     return good_matches
@@ -97,6 +99,36 @@ def draw_matches(img1, keypoints1, img2, keypoints2, matches):
     img3 = cv2.drawMatches(img1,keypoints1,img2,keypoints2,matches,None,flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
     return img3
 
+def draw_matches_with_distances(img1, kp1, img2, kp2, matches, max_distance=None):
+    # Use OpenCV's drawMatches to get initial visualization
+    match_img = cv2.drawMatches(img1, kp1, img2, kp2, matches, None,
+                                flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+    if not max_distance:
+        max_distance = max(m.distance for m in matches)
+
+    w1 = img1.shape[1]
+
+    for m in matches:
+        # Get keypoint locations
+        pt1 = tuple(np.round(kp1[m.queryIdx].pt).astype(int))
+        pt2 = tuple(np.round(kp2[m.trainIdx].pt).astype(int))
+        pt2_offset = (pt2[0] + w1, pt2[1])  # Adjust for side-by-side layout
+
+        # Normalize distance to get color
+        norm_dist = min(m.distance / max_distance, 1.0)
+        r = int(255 * norm_dist)
+        g = int(255 * (1 - norm_dist))
+        b = 0
+        color = (b, g, r)
+
+        # Put text (distance) near the second keypoint
+        text_pos = (pt2_offset[0] + 5, pt2_offset[1] - 5)
+        cv2.putText(match_img, f"{m.distance:.1f}", text_pos, 
+                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                    fontScale=0.4, color=color, thickness=1, lineType=cv2.LINE_AA)
+
+    return match_img
 
 def main():
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'stereo_calibration_params', 'stereo_calibration_data.pkl'))
@@ -185,7 +217,7 @@ def main():
     '''
     grey1 = clahe_preprocess(img1)
     grey2 = clahe_preprocess(img2)
-
+    display_SideBySide(grey1, grey2, "CLAHE")
     #Step 6: Perform SIFT inside the ellipses
     kp1, desc1 = detect_and_compute_sift(grey1, ellipse_mask1)
     kp2, desc2 = detect_and_compute_sift(grey2, ellipse_mask2)
@@ -196,8 +228,17 @@ def main():
     #Step 7: Feature matching
     matches = match_features(desc1, desc2)
     top_matches = matches[0:10]
-    matched_img = draw_matches(img1, kp1, img2, kp2, matches)
+    matched_img = draw_matches_with_distances(img1, kp1, img2, kp2, matches)
     cv2.imshow("Matches", matched_img)
+
+
+    #Step 8: Triangulate the points
+    # Get matched keypoint coordinates
+    pts1 = np.float32([kp1[m.queryIdx].pt for m in matches])
+    pts2 = np.float32([kp2[m.trainIdx].pt for m in matches])
+    # Use your triangulation function
+    pts3d = triangulate_pts.triangulate_points(pts1, pts2, P1, P2)
+    print(pts3d)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
