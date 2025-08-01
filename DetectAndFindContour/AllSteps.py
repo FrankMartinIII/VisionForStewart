@@ -25,6 +25,50 @@ def histogram_match(img1, img2):
     matched_bgr = cv2.cvtColor((matched).astype(np.uint8), cv2.COLOR_RGB2BGR)
     return matched_bgr
 
+def color_transfer(source, target):
+    # Convert images to Lab color space
+    source_lab = cv2.cvtColor(source, cv2.COLOR_BGR2LAB).astype("float32")
+    target_lab = cv2.cvtColor(target, cv2.COLOR_BGR2LAB).astype("float32")
+
+    # Split channels
+    lSrc, aSrc, bSrc = cv2.split(source_lab)
+    lTar, aTar, bTar = cv2.split(target_lab)
+
+    # Compute mean and stddev of each channel
+    lMeanSrc, lStdSrc = cv2.meanStdDev(lSrc)
+    lMeanTar, lStdTar = cv2.meanStdDev(lTar)
+
+    aMeanSrc, aStdSrc = cv2.meanStdDev(aSrc)
+    aMeanTar, aStdTar = cv2.meanStdDev(aTar)
+
+    bMeanSrc, bStdSrc = cv2.meanStdDev(bSrc)
+    bMeanTar, bStdTar = cv2.meanStdDev(bTar)
+
+    # Flatten scalar values
+    lMeanSrc = lMeanSrc[0][0]; lStdSrc = lStdSrc[0][0]
+    lMeanTar = lMeanTar[0][0]; lStdTar = lStdTar[0][0]
+
+    aMeanSrc = aMeanSrc[0][0]; aStdSrc = aStdSrc[0][0]
+    aMeanTar = aMeanTar[0][0]; aStdTar = aStdTar[0][0]
+
+    bMeanSrc = bMeanSrc[0][0]; bStdSrc = bStdSrc[0][0]
+    bMeanTar = bMeanTar[0][0]; bStdTar = bStdTar[0][0]
+
+    # Apply color transfer
+    l = ((lTar - lMeanTar) * (lStdSrc / lStdTar)) + lMeanSrc
+    a = ((aTar - aMeanTar) * (aStdSrc / aStdTar)) + aMeanSrc
+    b = ((bTar - bMeanTar) * (bStdSrc / bStdTar)) + bMeanSrc
+
+    # Clip values to valid range
+    l = np.clip(l, 0, 255)
+    a = np.clip(a, 0, 255)
+    b = np.clip(b, 0, 255)
+
+    # Merge channels and convert back to BGR
+    transferred = cv2.merge([l, a, b]).astype("uint8")
+    transferred = cv2.cvtColor(transferred, cv2.COLOR_LAB2BGR)
+    return transferred
+
 def find_hsv_mask(img, low_colors, high_colors, blur=False):
     if blur:
         img = cv2.GaussianBlur(img, (9,9), 0)
@@ -156,16 +200,16 @@ def main():
     map1x, map1y, map2x, map2y, P1, P2 = triangulate_pts.get_undistort_rectification_maps(cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R_Mat, T_Vec, (width, height))
     LUndist, RUndist = triangulate_pts.undistort_images(img1, img2, map1x, map1y, map2x, map2y)
     display_SideBySide(LUndist, RUndist, "Undistorted images")
-    #For now I am not using the undistorted images because I am not sure if these images were captured perfectly and too much is cropped.
     img1 = LUndist
     img2 = RUndist
     img2copy = img2.copy()
 
     #Step 1: Perform histogram matching
-    #Maybe I should try a different method for this b/c imgs can get washed out if not much contrast
-    img2 = histogram_match(img1, img2)
+    #img2 = histogram_match(img1, img2)
+    img2 = color_transfer(img1, img2)
     display_SideBySide(img1, img2, "Post histogram matching")
-
+    
+ 
     #Step 2: Develop the mask
     low_hsv_val = np.array([40, 30, 0])
     high_hsv_val = np.array([99, 255, 255])
