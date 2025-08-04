@@ -190,8 +190,8 @@ def draw_matches_with_distances(img1, kp1, img2, kp2, matches, max_distance=None
 def main():
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'stereo_calibration_params', 'stereo_calibration_data.pkl'))
     cameraMatrix1, distCoeffs1, cameraMatrix2, distCoeffs2, R_Mat, T_Vec = triangulate_pts.read_params(OUTPUT_DIRECTORY)
-    img1 = cv2.imread("stereo_images/70L.png")
-    img2 = cv2.imread("stereo_images/70R.png")
+    img1 = cv2.imread("stereo_images/90mmL.png")
+    img2 = cv2.imread("stereo_images/90mmR.png")
     display_SideBySide(img1, img2, "Initial images")
 
     #Step 0: Rectify and undistort
