@@ -133,23 +133,28 @@ def test_with_aruco(camera_id, camera_matrix, distortion_coeffs, T_camera_to_wor
         ret, frame = cap.read()
         if not ret:
             break
-        #cv2.imshow("cam", frame)
+        
         
         grey = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         corners, ids, rejected = cv2.aruco.detectMarkers(grey, aruco_dict, parameters=parameters)
-
+        
         if ids is not None:
+            frame_with_aruco = frame.copy()
             rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(corners, aruco_size, camera_matrix, distortion_coeffs)
-            cv2.aruco.drawDetectedMarkers(frame, corners)
+            cv2.aruco.drawDetectedMarkers(frame_with_aruco, corners)
             #cv2.aruco.drawAxis(frame, camera_matrix, distortion_coeffs, rvecs, tvecs, 0.03)
             
-            # Convert rotation vector to matrix
-            R_cam_to_marker, _ = cv2.Rodrigues(rvecs)
-            T_cam_to_marker = np.eye(4)
-            T_cam_to_marker[:3, :3] = R_cam_to_marker
-            T_cam_to_marker[:3, 3] = tvecs.flatten()
+            coords_cam_frame = np.append(tvecs.flatten(), 1)
+            coords_world_frame = T_camera_to_world @ coords_cam_frame
+            position_world = coords_world_frame[:3] #0,1,2 are x, y, and z
+
+             # Text position
+            text = f"X: {position_world[0]:.3f} m  Y: {position_world[1]:.3f} m  Z: {position_world[2]:.3f} m"
+            cv2.putText(frame_with_aruco, text, (10, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.imshow("Aruco detection", frame_with_aruco)
         
         cv2.imshow("frame", frame)
+        
         key = cv2.waitKey(1) & 0xFF
         if key == 27:  # ESC to exit
             break
