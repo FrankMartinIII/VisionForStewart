@@ -15,9 +15,9 @@ def calibrate_camera(cameraNum):
     rotVecs: rotation vectors (omega)
     transVecs: translation vectors
     '''
-    CHESSBOARD_SIZE = (10,7)
+    CHESSBOARD_SIZE = (8,6)
     #SQUARE_SIZE = 2.36 #Size of squares in cm
-    SQUARE_SIZE = 15
+    SQUARE_SIZE = 29
     folderStr = 'calibration_images/stereo' + str(cameraNum) + '/*.jpg'
     #CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'calibration_images/*.jpg'))
     CALIBRATION_IMAGES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', folderStr))

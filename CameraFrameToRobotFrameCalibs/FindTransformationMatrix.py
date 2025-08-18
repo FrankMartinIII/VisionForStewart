@@ -7,9 +7,9 @@ def camera_robot_calibration(chessboard_img, camera_matrix_left, distortion_coef
     #This is for a 12x8 grid technically to center everything in the middle of our workspace
     #COLS = 11  # inner corners per row
     #ROWS = 9  # inner corners per column
-    COLS = 10
-    ROWS = 7
-    SQUARE_SIZE = 15  # mm
+    COLS = 8
+    ROWS = 6
+    SQUARE_SIZE = 29  # mm
     term_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-5)
     #For display purposes only
     axis = np.float32([[45,0,0], [0,45,0], [0,0,-45]])
@@ -29,7 +29,7 @@ def camera_robot_calibration(chessboard_img, camera_matrix_left, distortion_coef
             print(f"Point {i * COLS + j}: ({x:.3f}, {y:.3f}, {z:.3f})")
 
     object_points = np.array(object_points, dtype=np.float32)
-    '''
+    ''''''
     object_points = []
     for i in range(ROWS):
         for j in range(COLS):
@@ -40,7 +40,7 @@ def camera_robot_calibration(chessboard_img, camera_matrix_left, distortion_coef
             print(f"Point {i * COLS + j}: ({x:.3f}, {y:.3f}, {z:.3f})")
 
     object_points = np.array(object_points, dtype=np.float32)
-    '''
+    ''''''
     #object_points = np.zeros((ROWS*COLS,3), np.float32)
     #object_points[:,:2] = np.mgrid[0:ROWS, 0:COLS].T.reshape(-1,2)
     
@@ -65,7 +65,7 @@ def camera_robot_calibration(chessboard_img, camera_matrix_left, distortion_coef
             cv2.circle(chessboard_img , tuple(pt.ravel().astype(int)), 2, (0,0,255),-1)
         cv2.imshow('Chessboard', chessboard_img)
         cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        #cv2.destroyAllWindows()
         R, _ = cv2.Rodrigues(rvecs) #Convert 3x1 rvecs to a 3x3 rotation matrix
         print("Rotation matrix R: ", R.shape)
         print(R)
@@ -140,17 +140,38 @@ def test_with_aruco(camera_id, camera_matrix, distortion_coeffs, T_camera_to_wor
         
         if ids is not None:
             frame_with_aruco = frame.copy()
+            #estimatePose returns tvec that describes transformation from aruco center to camera optical center, it does not return coordinates of aruco in cam frame
             rvecs, tvecs, _ = cv2.aruco.estimatePoseSingleMarkers(corners, aruco_size, camera_matrix, distortion_coeffs)
             cv2.aruco.drawDetectedMarkers(frame_with_aruco, corners)
             #cv2.aruco.drawAxis(frame, camera_matrix, distortion_coeffs, rvecs, tvecs, 0.03)
             
+            '''
             coords_cam_frame = np.append(tvecs.flatten(), 1)
             coords_world_frame = T_camera_to_world @ coords_cam_frame
             position_world = coords_world_frame[:3] #0,1,2 are x, y, and z
 
-             # Text position
-            text = f"X: {position_world[0]:.3f} m  Y: {position_world[1]:.3f} m  Z: {position_world[2]:.3f} m"
-            cv2.putText(frame_with_aruco, text, (10, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            # Text position
+            text_cam = f"Camera FrameX: {coords_cam_frame[0]:.3f} mm  Y: {coords_cam_frame[1]:.3f} mm  Z: {coords_cam_frame[2]:.3f} mm"
+            text_world = f"World FrameX: {position_world[0]:.3f} mm  Y: {position_world[1]:.3f} mm  Z: {position_world[2]:.3f} mm"
+            cv2.putText(frame_with_aruco, text_cam, (10, height - 100), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.putText(frame_with_aruco, text_world, (10, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            cv2.imshow("Aruco detection", frame_with_aruco)
+            '''
+            for rvec, tvec in zip(rvecs, tvecs):
+                #T marker to camera
+                R_marker, _ = cv2.Rodrigues(rvec)
+                T_marker_to_camera = np.eye(4)
+                T_marker_to_camera[:3, :3] = R_marker
+                T_marker_to_camera[:3, 3] = tvec.flatten()
+
+                #T marker to world = T camera to world * T marker to camera
+                T_marker_to_world = T_camera_to_world @ T_marker_to_camera
+                marker_world_pos = T_marker_to_world[:3,3]
+
+                text_cam = f"Camera FrameX: {T_marker_to_camera[0,3]:.3f} mm  Y: {T_marker_to_camera[1,3]:.3f} mm  Z: {T_marker_to_camera[2,3]:.3f} mm"
+                text_world = f"World FrameX: {marker_world_pos[0]:.3f} mm  Y: {marker_world_pos[1]:.3f} mm  Z: {marker_world_pos[2]:.3f} mm"
+                cv2.putText(frame_with_aruco, text_cam, (10, height - 100), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                cv2.putText(frame_with_aruco, text_world, (10, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             cv2.imshow("Aruco detection", frame_with_aruco)
         
         cv2.imshow("frame", frame)
@@ -168,14 +189,14 @@ def main():
     #Need to go from left camera frame -> robot base frame/world frame
     PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'stereo_calibration_params', 'stereo_calibration_data.pkl'))
     cameraMat1, distCoeffs1, cameraMat2, distCoeffs2, R, T = read_params(PARAM_DIR)
-    img = cv2.imread("calibration_05.jpg")
+    img = cv2.imread("chess3.jpg")
     print("cameraMatrix1: ")
     print(cameraMat1)
     print("distortionCoeffs1:")
     print(distCoeffs1)
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Triangulation'))
     T = camera_robot_calibration(img, cameraMat1, distCoeffs1, OUTPUT_DIRECTORY)
-    test_with_aruco(0, cameraMat1, distCoeffs1, T, img=img)
+    test_with_aruco(4, cameraMat1, distCoeffs1, T, img=img)
 
 if __name__ == "__main__":
     main()
