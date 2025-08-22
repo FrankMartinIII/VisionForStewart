@@ -168,10 +168,19 @@ def test_with_aruco(camera_id, camera_matrix, distortion_coeffs, T_camera_to_wor
                 T_marker_to_world = T_camera_to_world @ T_marker_to_camera
                 marker_world_pos = T_marker_to_world[:3,3]
 
-                text_cam = f"Camera FrameX: {T_marker_to_camera[0,3]:.3f} mm  Y: {T_marker_to_camera[1,3]:.3f} mm  Z: {T_marker_to_camera[2,3]:.3f} mm"
-                text_world = f"World FrameX: {marker_world_pos[0]:.3f} mm  Y: {marker_world_pos[1]:.3f} mm  Z: {marker_world_pos[2]:.3f} mm"
+                #Marker top left in marker space
+                half = aruco_size / 2
+                top_left_aruco_marker_coordinates = np.array([-half, half, 0, 1], dtype=np.float32).reshape(4,1)
+                top_left_aruco_camera_coordinates = T_marker_to_camera @ top_left_aruco_marker_coordinates #Should give [x,y,z,1] transpose in camera frame
+                top_left_aruco_world_coordinates = T_camera_to_world @ top_left_aruco_camera_coordinates
+
+
+                text_cam = f"CameraFrame X: {T_marker_to_camera[0,3]:.3f} mm  Y: {T_marker_to_camera[1,3]:.3f} mm  Z: {T_marker_to_camera[2,3]:.3f} mm"
+                #text_world = f"World FrameX: {marker_world_pos[0]:.3f} mm  Y: {marker_world_pos[1]:.3f} mm  Z: {marker_world_pos[2]:.3f} mm"
+                text_world = f"WorldFrame topleft X: {top_left_aruco_world_coordinates[0]:.3f} mm  Y: {top_left_aruco_world_coordinates[1]:.3f} mm  Z: {top_left_aruco_world_coordinates[2]:.3f} mm"
                 cv2.putText(frame_with_aruco, text_cam, (10, height - 100), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
                 cv2.putText(frame_with_aruco, text_world, (10, height - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                
             cv2.imshow("Aruco detection", frame_with_aruco)
         
         cv2.imshow("frame", frame)
