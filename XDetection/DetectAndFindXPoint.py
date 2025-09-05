@@ -177,6 +177,26 @@ def main():
     print("INTERSECTION POINT IN IMAGE1 LOCATED AT: X=", img1IntersectX, " Y=", img1IntersectY)
     cv2.waitKey(0)
 
+
+
+    #------AFTER THIS LINE IS EXPERIMENTAL-------
+    #Step 9: Make a circle mask around the X intersection point
+    radius = 40
+    circle_mask1 = np.zeros_like(mask1, dtype=np.uint8)
+    cv2.circle(circle_mask1, (img1IntersectX,img1IntersectY), radius, 255, -1)
+    cv2.imshow("Generated circle mask", circle_mask1)
+
+    #Step 10: Preprocessing for SIFT
+    grey1 = AllSteps.clahe_preprocess(img1)
+
+    #Step 11: Perform SIFT inside circles
+    kp1, desc1 = AllSteps.detect_and_compute_sift(grey1, circle_mask1)
+    #kp2, desc2 = detect_and_compute_sift(grey2, ellipse_mask2)
+    sift1 = AllSteps.draw_sift_keypoints(img1, kp1)
+    #sift2 = draw_sift_keypoints(img2, kp2)
+    cv2.imshow("Keypoints in image1", sift1)
+
+    cv2.waitKey(0)
 if __name__ == "__main__":
     main()
 

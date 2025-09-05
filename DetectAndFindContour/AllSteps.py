@@ -131,6 +131,7 @@ def draw_sift_keypoints(img, keypoints):
     return img_with_kp
 
 def clahe_preprocess(img):
+    #CLAHE increases contrast
     grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     grey_eq = clahe.apply(grey)
