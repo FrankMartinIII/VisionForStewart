@@ -12,6 +12,7 @@ import triangulate_pts
 import contour_det_lib
 import AllSteps
 
+#This was my first attempt at x detection, but it did not work well
 def find_green_X_center(image_bgr):
     # Step 1: Original image
     cv2.imshow("Original", image_bgr)

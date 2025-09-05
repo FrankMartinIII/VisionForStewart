@@ -285,7 +285,7 @@ def main():
     '''
     grey1 = clahe_preprocess(img1)
     grey2 = clahe_preprocess(img2)
-    #RIGHT HERE I AM DOING SIFT ON THE RECTIFIE IMG2 BEFORE HIST EQ
+    #RIGHT HERE I AM DOING SIFT ON THE RECTIFY IMG2 BEFORE HIST EQ
     grey2 = clahe_preprocess(img2copy)
     display_SideBySide(grey1, grey2, "CLAHE")
     #Step 6: Perform SIFT inside the ellipses
@@ -306,7 +306,7 @@ def main():
     # Get matched keypoint coordinates
     pts1 = np.float32([kp1[m.queryIdx].pt for m in top_matches])
     pts2 = np.float32([kp2[m.trainIdx].pt for m in top_matches])
-    # Use your triangulation function
+    # Use triangulation function
     pts3d = triangulate_pts.triangulate_points(pts1, pts2, P1, P2)
     print(pts3d)
     for pt3d, match in zip(pts3d, top_matches):
