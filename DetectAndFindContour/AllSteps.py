@@ -69,9 +69,9 @@ def color_transfer(source, target):
     transferred = cv2.cvtColor(transferred, cv2.COLOR_LAB2BGR)
     return transferred
 
-def find_hsv_mask(img, low_colors, high_colors, blur=False):
+def find_hsv_mask(img, low_colors, high_colors, blur=False, blur_alpha=0):
     if blur:
-        img = cv2.GaussianBlur(img, (9,9), 0)
+        img = cv2.GaussianBlur(img, (9,9), blur_alpha)
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     lower_green = np.array([48, 40, 0])
     upper_green = np.array([99, 255, 255])
@@ -145,7 +145,7 @@ def match_features(descriptors1, descriptors2, ratio_threshold=0.75, distance_th
     #Apply Lowe's ratio test
     good_matches = []
     for m,n in matches:
-        if m.distance < 0.75*n.distance:
+        if m.distance < ratio_threshold*n.distance:
             good_matches.append(m)
     #Eliminate bad matches below distance threshold (max in SIFT is 300 I think)
     good_matches = [m for m in good_matches if m.distance < distance_threshold]
