@@ -29,7 +29,7 @@ def camera_robot_calibration(chessboard_img, camera_matrix_left, distortion_coef
             print(f"Point {i * COLS + j}: ({x:.3f}, {y:.3f}, {z:.3f})")
 
     object_points = np.array(object_points, dtype=np.float32)
-    ''''''
+    '''
     object_points = []
     for i in range(ROWS):
         for j in range(COLS):
@@ -40,7 +40,7 @@ def camera_robot_calibration(chessboard_img, camera_matrix_left, distortion_coef
             print(f"Point {i * COLS + j}: ({x:.3f}, {y:.3f}, {z:.3f})")
 
     object_points = np.array(object_points, dtype=np.float32)
-    ''''''
+    '''
     #object_points = np.zeros((ROWS*COLS,3), np.float32)
     #object_points[:,:2] = np.mgrid[0:ROWS, 0:COLS].T.reshape(-1,2)
     
@@ -205,7 +205,7 @@ def main():
     print(distCoeffs1)
     OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'Triangulation'))
     T = camera_robot_calibration(img, cameraMat1, distCoeffs1, OUTPUT_DIRECTORY)
-    test_with_aruco(4, cameraMat1, distCoeffs1, T, img=img)
+    #test_with_aruco(4, cameraMat1, distCoeffs1, T, img=img)
 
 if __name__ == "__main__":
     main()
