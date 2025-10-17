@@ -181,14 +181,16 @@ def main():
     #Read in calibration parameters for the cameras
     #Need to go from camera frame -> robot base frame/world frame
     #PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'catkin_ws/src/StewartIBVS/calibration_params_home_webcam/0/calibration_data.pkl'))
-    PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'catkin_ws/src/vs_stewart/calibration_params_home_webcam/0/calibration_data.pkl'))
+    #PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'catkin_ws/src/vs_stewart/calibration_params_home_webcam/0/calibration_data.pkl'))
+    PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'calibration_params_home_webcam/0', 'calibration_data.pkl'))
+    print(PARAM_DIR)
     cameraMat1, distCoeffs1, R, T = read_params(PARAM_DIR)
-    img = cv2.imread("29_mm_chess.jpg")
+    img = cv2.imread("2025-10-10-162020.jpg")
     print("cameraMatrix1: ")
     print(cameraMat1)
     print("distortionCoeffs1:")
     print(distCoeffs1)
-    OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'CameraFrameToRobotFrameCalibs'))
+    OUTPUT_DIRECTORY = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'RobotCameraCalibration'))
     T = camera_robot_calibration(img, cameraMat1, distCoeffs1, OUTPUT_DIRECTORY)
     #test_with_aruco(4, cameraMat1, distCoeffs1, T, img=img)
 
