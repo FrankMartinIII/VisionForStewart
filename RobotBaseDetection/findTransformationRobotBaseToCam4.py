@@ -6,7 +6,7 @@ import numpy as np
 # ---------- User settings ----------
 IMAGE_PATH = "greenBase2.jpg"
 # How many clicks we expect (X1,X2,Y1,Y2,Center)
-LABELS = ["X1", "X2", "X3", "Y1", "Y2", "Center"]
+LABELS = ["TopLeft", "MidLeft", "BotLeft", "TopRight", "MidRight", "BotRight", "h1", "h2", "j1", "j2"]
 # -----------------------------------
 
 selected_points = []          # raw pixel coords where user clicked
@@ -69,22 +69,24 @@ def user_circle_selection(base_img):
             cv2.circle(img, (int(cx), int(cy)), 2, (0, 0, 255), 3)
             cv2.putText(img, str(i), (int(cx) + 6, int(cy) - 6),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-        print(f"Detected {len(detected)} circles. Click these 6 points in order:")
+        print(f"Detected {len(detected)} circles. Click these 8 points in order:")
     else:
         print("No circles detected by Hough. You can still click manually.")
         detected = None
 
-    print("  1) X1 (left of X pair)")
-    print("  2) X2 (right of X pair)")
-    print("  3) X3 (right of X pair)")
-    print("  4) Y1 (front/upper of Y pair)")
-    print("  5) Y2 (back/lower of Y pair)")
-    print("  6) Center (big center circle)\n")
+    print("  1) top left corner")
+    print("  2) middle left")
+    print("  3) bottom left corner")
+    print("  4) top right corner")
+    print("  5) middle right")
+    print("  6) bottom right corner")
+    print("  7) left hand side base attachment pt")
+    print("  6) closer attachment point to middle hole")
     print("Click with left mouse button. Press ESC anytime to cancel.")
 
     # Make an overlay copy for drawing click markers so we can still re-show unmodified image
     clicked_overlay = img.copy()
-    window_name = "Select Circles (click 6)"
+    window_name = "Select Circles (click 8)"
     cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
     cv2.imshow(window_name, clicked_overlay)
     cv2.setMouseCallback(window_name, mouse_callback, clicked_overlay)
@@ -140,75 +142,80 @@ def simple_fit_line(points):
     vx, vy, x0, y0 = cv2.fitLine(pts, cv2.DIST_L2, 0, 0.01, 0.01)
     return vx,vy,x0,y0
 
-def camera_robot_calibration_show_clicks(base_img, camera_matrix=None, distortion_coefficients=None):
+def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coefficients):
     display = base_img.copy()
+    #This gives the coordinates of the circles in the camera frame, but only xy coordinates
     matched_centers, detected_circles = user_circle_selection(base_img)
     print(matched_centers)
-    #Draw lines through matched centers in camera space
-    vx_x, vy_x, x0_x, y0_x = simple_fit_line([matched_centers[0], matched_centers[1], matched_centers[5], matched_centers[2]])
-    vx_y, vy_y, x0_y, y0_y = simple_fit_line([matched_centers[3], matched_centers[4], matched_centers[5]])
-    scale = 1000
-    pt1_x = (int(x0_x - vx_x * scale), int(y0_x - vy_x * scale))
-    pt2_x = (int(x0_x + vx_x * scale), int(y0_x + vy_x * scale))
-    cv2.line(display, pt1_x, pt2_x, (0, 0, 255), 2)  # red X line
 
-    pt1_y = (int(x0_y - vx_y * scale), int(y0_y - vy_y * scale))
-    pt2_y = (int(x0_y + vx_y * scale), int(y0_y + vy_y * scale))
-    cv2.line(display, pt1_y, pt2_y, (0, 255, 0), 2)  # green Y line
-    cv2.imshow("Lines", display)
+    #However, I know where they should be in world space by measuring the actual base.
+    #ACTUALLY I could have chosen any known points. It may be better to choose some other ones actually.
+    #In mm
+    object_points = np.array([
+        [-109.982, 59.944, 0.0], #topL
+        [-109.982, 0.0, 0.0], #midl
+        [-109.982, -59.944 , 0.0], #botL
+        [109.982, 59.944, 0.0], #topR
+        [109.982, 0, 0.0], #midR
+        [109.982, -59.944, 0.0], #botR
+        [-59.055,0,0], #h1
+        [-43.815,0,0], #h2
+        [29.5148, -51.1431302256, 0.0],
+        [21.9075, -37.9449030788, 0.0]
+    ], dtype=np.float32)
+
+    
+    #Now I can use solvePnP to find the transformation for these points from world to camera
+    image_points = np.array(matched_centers, dtype=np.float32)
+
+    #object_points = object_points[0:6]
+    #image_points = image_points[0:6]
+    object_points = object_points[[1,4,6,6,8,9]]
+    image_points = image_points[[1,4,6,6,8,9]]
+    ret, rvec, tvec = cv2.solvePnP(object_points, image_points, camera_matrix, distortion_coefficients, flags=cv2.SOLVEPNP_IPPE)
+    
+    print("Object points ", object_points)
+    print("Image points ", image_points)
+
+    print("Ret: ", ret)
+    print("rvec: ", rvec)
+    print("tvec: ", tvec)
+
+
+    #I want to visualize the points I circled to make sure they are correct
+    temp_disp_img = base_img.copy()
+    axis = np.float32([[40,0,0], [0,-40,0], [0,0,-40]])
+    origin = np.float32([[0,0,0]])  
+    imgpts, _ = cv2.projectPoints(axis, rvec, tvec, camera_matrix, distortion_coefficients)
+    origin_imgpt = cv2.projectPoints(origin, rvec, tvec, camera_matrix, distortion_coefficients)
+    temp_disp_img = drawAxes(temp_disp_img, origin_imgpt, imgpts)
+    imgpts, _ = cv2.projectPoints(object_points, rvec, tvec, camera_matrix, distortion_coefficients)
+    # Flatten and cast to Python int tuples outside the loop
+    imgpts_int = [tuple(int(float(c)) for c in pt.ravel()) for pt in imgpts]
+
+    # Debug: print all points before drawing
+    print("Projected points (as Python int tuples):")
+    for p in imgpts_int:
+        print(p)
+    # Draw all points
+    for pt in imgpts_int:
+        cv2.circle(temp_disp_img, pt, 2, (0, 0, 255), -1)
+    cv2.imshow('Test', temp_disp_img)
     cv2.waitKey(0)
 
-    #Creating the axes
-    #They should already be normalized but just to make sure
-    #THIS DOESNT WORK because these are 2D vectors. We need of the points to get the plane
-    x_vec_cam = np.array([vx_x, vx_y])
-    coplanar_vec_cam = np.array([vy_x, vy_y])
-    #Get a z
-    z_vec_cam = np.cross(x_vec_cam, coplanar_vec_cam)
-    #Get a true y
-    y_axis_cam = np.cross(z_vec_cam, x_vec_cam)
-    #Normalize them (technically I think x and z should already be normal but just to make sure)
-    x_axis_cam_normalized /= np.linalg.norm(x_vec_cam)
-    y_axis_cam_normalized /= np.linalg.norm(y_axis_cam)
-    z_axis_cam_normalized /= np.linalg.norm(z_vec_cam)
-    print("")
-    print(f"Normalized basis vectors {x_axis_cam_normalized}   {y_axis_cam_normalized}   {z_axis_cam_normalized}")
-    print("")
 
-    #Now build matrix to represent this. It is 3 basis vectors as the first 3 cols and last col is the origin.
-    R_world_to_cam = np.column_stack((x_axis_cam_normalized, y_axis_cam_normalized, z_axis_cam_normalized))
-    #print("R_world_to_cam", R_world_to_cam)
-    world_origin_in_cam = matched_centers[5].reshape(3,1) #Center is our origin
-    T_world_to_camera = np.eye(4)
-    T_world_to_camera[:3, :3] = R_world_to_cam
-    T_world_to_camera[:3, 3] = world_origin_in_cam.ravel()
-    print("T_world_to_cam ", T_world_to_camera)
-    T_camera_to_world = np.linalg.inv(T_world_to_camera)
 
-    #Save them to a file
-    transformationMatrices = {
-        'T_world_to_camera' : T_world_to_camera,
-        'T_camera_to_world' : T_camera_to_world
-    }
-    '''
-    with open(os.path.join(save_dir, "TransformationMatricesForStewCalib.pkl"), 'wb') as f:
-        pickle.dump(transformationMatrices, f)
-    np.savetxt(os.path.join(save_dir, 'T_camera_to_world_for_calibration.txt'), T_camera_to_world)
-    np.savetxt(os.path.join(save_dir, 'T_world_to_camera_for_calibration.txt'), T_world_to_camera)
-    '''
 
-    #Some extra code for optional frame visualization
-    axis_length = 1000 * 1  # for visualization
-    world_axes = np.float32([
-        [0, 0, 0],                 # origin
-        [axis_length, 0, 0],       # X
-        [0, axis_length, 0],       # Y
-        [0, 0, axis_length]        # Z
-    ])
-
-    new_basis_viz = visualization(world_axes, base_img, T_world_to_camera, camera_matrix, distortion_coefficients)
-    cv2.imshow("World Axes Visualized", new_basis_viz)
-    cv2.waitKey(0)
+def drawAxes(img, origin_imgpts, imgpts):
+    def tupleOfInts(arr):
+        return tuple(int(x) for x in arr)
+    origin = tuple(int(x) for x in origin_imgpts[0].ravel())
+    print("origin: ", origin)
+    print("axesx end point: ", tupleOfInts(imgpts[0].ravel()))
+    img = cv2.line(img, origin, tupleOfInts(imgpts[0].ravel()), (255,0,0),5)
+    img = cv2.line(img, origin, tupleOfInts(imgpts[1].ravel()), (0,255,0),5)
+    img = cv2.line(img, origin, tupleOfInts(imgpts[2].ravel()), (0,0,255),5)
+    return img
 
 def visualization(axes, myimg, transformation_matrix, camera_matrix, distortion_coef):
     img = myimg.copy()

@@ -140,65 +140,104 @@ def simple_fit_line(points):
     vx, vy, x0, y0 = cv2.fitLine(pts, cv2.DIST_L2, 0, 0.01, 0.01)
     return vx,vy,x0,y0
 
-def camera_robot_calibration_show_clicks(base_img, camera_matrix=None, distortion_coefficients=None):
+def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coefficients):
     display = base_img.copy()
+    #This gives the coordinates of the circles in the camera frame, but only xy coordinates
     matched_centers, detected_circles = user_circle_selection(base_img)
     print(matched_centers)
-    #Draw lines through matched centers in camera space
-    vx_x, vy_x, x0_x, y0_x = simple_fit_line([matched_centers[0], matched_centers[1], matched_centers[5], matched_centers[2]])
-    vx_y, vy_y, x0_y, y0_y = simple_fit_line([matched_centers[3], matched_centers[4], matched_centers[5]])
-    scale = 1000
-    pt1_x = (int(x0_x - vx_x * scale), int(y0_x - vy_x * scale))
-    pt2_x = (int(x0_x + vx_x * scale), int(y0_x + vy_x * scale))
-    cv2.line(display, pt1_x, pt2_x, (0, 0, 255), 2)  # red X line
 
-    pt1_y = (int(x0_y - vx_y * scale), int(y0_y - vy_y * scale))
-    pt2_y = (int(x0_y + vx_y * scale), int(y0_y + vy_y * scale))
-    cv2.line(display, pt1_y, pt2_y, (0, 255, 0), 2)  # green Y line
-    cv2.imshow("Lines", display)
+    #However, I know where they should be in world space by measuring the actual base.
+    #ACTUALLY I could have chosen any known points. It may be better to choose some other ones actually.
+    #In mm
+    object_points = np.array([
+        [-43.815, 0.0, 0.0], #X1
+        [-59.055, 0.0, 0.0], #X2
+        [109.982, 0.0 , 0.0], #X3
+        [21.9075, -37.9449030788, 0.0], #second coplanar vec p1 in a line
+        [29.5148, -51.1431302256, 0.0], #second coplanar vec p2 in a line
+        [0,0,0] #Center
+    ], dtype=np.float32)
+
+    #Now I can use solvePnP to find the transformation for these points from world to camera
+    image_points = np.array(matched_centers, dtype=np.float32)
+    ret, rvec, tvec = cv2.solvePnP(object_points, image_points, camera_matrix, distortion_coefficients)
+
+    #Now, I will define my own axes just like on the checkerboard.
+    #I need to be able to transform points from the stewart platform base to the camera frame
+    #First, create transformation matrix from solvePnP
+    R_stew_base_to_camera, _ = cv2.Rodrigues(rvec)
+    T_stew_base_to_camera = np.eye(4)
+    T_stew_base_to_camera[:3,:3] = R_stew_base_to_camera
+    T_stew_base_to_camera[:3, 3] = tvec[:,0]
+    print("Transformation matrix from stewart platform base to camera space")
+    print(T_stew_base_to_camera)
+
+
+
+    #I want to visualize the points I circled to make sure they are correct
+    temp_disp_img = base_img.copy()
+    axis = np.float32([[40,0,0], [0,-40,0], [0,0,-40]])
+    origin = np.float32([[0,0,0]])  
+    imgpts, _ = cv2.projectPoints(axis, rvec, tvec, camera_matrix, distortion_coefficients)
+    origin_imgpt = cv2.projectPoints(origin, rvec, tvec, camera_matrix, distortion_coefficients)
+    temp_disp_img = drawAxes(temp_disp_img, origin_imgpt, imgpts)
+    imgpts, _ = cv2.projectPoints(object_points, rvec, tvec, camera_matrix, distortion_coefficients)
+    for pt in imgpts:
+        cv2.circle(temp_disp_img , tuple(pt.ravel().astype(int)), 2, (0,0,255),-1)
+    cv2.imshow('Test', temp_disp_img)
     cv2.waitKey(0)
 
-    #Creating the axes
-    #They should already be normalized but just to make sure
-    #THIS DOESNT WORK because these are 2D vectors. We need of the points to get the plane
-    x_vec_cam = np.array([vx_x, vx_y])
-    coplanar_vec_cam = np.array([vy_x, vy_y])
-    #Get a z
-    z_vec_cam = np.cross(x_vec_cam, coplanar_vec_cam)
-    #Get a true y
-    y_axis_cam = np.cross(z_vec_cam, x_vec_cam)
-    #Normalize them (technically I think x and z should already be normal but just to make sure)
-    x_axis_cam_normalized /= np.linalg.norm(x_vec_cam)
-    y_axis_cam_normalized /= np.linalg.norm(y_axis_cam)
-    z_axis_cam_normalized /= np.linalg.norm(z_vec_cam)
+
+
+    #OK so now I have to take 3 points to define my axes. These are object points and must be transformed to camera frame
+    #On checkerboard it was easy to choose, but now I guess I can choose whatever
+    #Origin
+    p0 = np.array([0.0, 0.0, 0.0, 1.0])
+    #One point along x-axis
+    p1 = np.array([60, 0.0, 0.0, 1.0])
+    #One point along y-axis
+    p2 = np.array([0.0, -60, 0.0, 1.0])
+    #Transform them to camera space. From here I am following what I did in
+    #RobotCalibrationFindTransformationMatrix.py exactly
+    p0_cam_space = T_stew_base_to_camera @ p0
+    p1_cam_space = T_stew_base_to_camera @ p1
+    p2_cam_space = T_stew_base_to_camera @ p2
+    print(f"Coordinates in camera space {p0_cam_space}   {p1_cam_space}   {p2_cam_space}")
+    #Those coordinates are homogeneous so I want to make them just xyz
+    p0_cam_space = p0_cam_space[:3]
+    p1_cam_space = p1_cam_space[:3]
+    p2_cam_space = p2_cam_space[:3]
+
+    #Now to define the 3 vectors that will make up our basis in R3 space
+    x_axis_cam = p1_cam_space - p0_cam_space
+    y_axis_cam = p2_cam_space - p0_cam_space
+    #The Z can be found by doing cross product of X and Y vectors to get a vector perpendicular to the plane
+    #This ensures it is independent
+    z_axis_cam = np.cross(x_axis_cam, y_axis_cam)
+    print(f"Vectors in camera space {x_axis_cam}   {y_axis_cam}   {z_axis_cam}")
+    #This may not be necessary, but there is something called Gram-Schmidt process
+    #that can be used to make sure you have a true orthonormal basis
+    y_axis_cam = np.cross(z_axis_cam, x_axis_cam)
+    print(f"Vectors in camera space after Gram-Schmidt {x_axis_cam}   {y_axis_cam}   {z_axis_cam}")
+    #These 3 vectors also have to be normalized
+    x_axis_cam_normalized = x_axis_cam / np.linalg.norm(x_axis_cam)
+    y_axis_cam_normalized  = y_axis_cam / np.linalg.norm(y_axis_cam)
+    z_axis_cam_normalized = z_axis_cam / np.linalg.norm(z_axis_cam)
     print("")
     print(f"Normalized basis vectors {x_axis_cam_normalized}   {y_axis_cam_normalized}   {z_axis_cam_normalized}")
     print("")
 
     #Now build matrix to represent this. It is 3 basis vectors as the first 3 cols and last col is the origin.
     R_world_to_cam = np.column_stack((x_axis_cam_normalized, y_axis_cam_normalized, z_axis_cam_normalized))
-    #print("R_world_to_cam", R_world_to_cam)
-    world_origin_in_cam = matched_centers[5].reshape(3,1) #Center is our origin
+    world_origin_in_cam = p0_cam_space.reshape(3,1)
     T_world_to_camera = np.eye(4)
     T_world_to_camera[:3, :3] = R_world_to_cam
     T_world_to_camera[:3, 3] = world_origin_in_cam.ravel()
     print("T_world_to_cam ", T_world_to_camera)
     T_camera_to_world = np.linalg.inv(T_world_to_camera)
 
-    #Save them to a file
-    transformationMatrices = {
-        'T_world_to_camera' : T_world_to_camera,
-        'T_camera_to_world' : T_camera_to_world
-    }
-    '''
-    with open(os.path.join(save_dir, "TransformationMatricesForStewCalib.pkl"), 'wb') as f:
-        pickle.dump(transformationMatrices, f)
-    np.savetxt(os.path.join(save_dir, 'T_camera_to_world_for_calibration.txt'), T_camera_to_world)
-    np.savetxt(os.path.join(save_dir, 'T_world_to_camera_for_calibration.txt'), T_world_to_camera)
-    '''
-
     #Some extra code for optional frame visualization
-    axis_length = 1000 * 1  # for visualization
+    axis_length = 60 * 1  # for visualization
     world_axes = np.float32([
         [0, 0, 0],                 # origin
         [axis_length, 0, 0],       # X
@@ -209,6 +248,19 @@ def camera_robot_calibration_show_clicks(base_img, camera_matrix=None, distortio
     new_basis_viz = visualization(world_axes, base_img, T_world_to_camera, camera_matrix, distortion_coefficients)
     cv2.imshow("World Axes Visualized", new_basis_viz)
     cv2.waitKey(0)
+
+
+
+def drawAxes(img, origin_imgpts, imgpts):
+    def tupleOfInts(arr):
+        return tuple(int(x) for x in arr)
+    origin = tuple(int(x) for x in origin_imgpts[0].ravel())
+    print("origin: ", origin)
+    print("axesx end point: ", tupleOfInts(imgpts[0].ravel()))
+    img = cv2.line(img, origin, tupleOfInts(imgpts[0].ravel()), (255,0,0),5)
+    img = cv2.line(img, origin, tupleOfInts(imgpts[1].ravel()), (0,255,0),5)
+    img = cv2.line(img, origin, tupleOfInts(imgpts[2].ravel()), (0,0,255),5)
+    return img
 
 def visualization(axes, myimg, transformation_matrix, camera_matrix, distortion_coef):
     img = myimg.copy()
