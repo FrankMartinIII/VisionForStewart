@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 # ---------- User settings ----------
-IMAGE_PATH = "greenBase2.jpg"
+IMAGE_PATH = "greenBase5-720p.jpg"
 # How many clicks we expect (X1,X2,Y1,Y2,Center)
 LABELS = ["TopLeft", "MidLeft", "BotLeft", "TopRight", "MidRight", "BotRight", "h1", "h2", "j1", "j2"]
 # -----------------------------------
@@ -17,10 +17,10 @@ current_label_idx = 0
 def detect_circles(img):
     """Return Nx3 array of circles (x,y,r) or None if none found."""
     greyimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(greyimg, (3, 3), 1)
+    blurred = cv2.GaussianBlur(greyimg, (1, 1), 3)
     circles = cv2.HoughCircles(
-        blurred, cv2.HOUGH_GRADIENT_ALT, dp=1.5, minDist=10,
-        param1=100, param2=0.8, minRadius=0, maxRadius=0
+        blurred, cv2.HOUGH_GRADIENT_ALT, dp=1.5, minDist=3,
+        param1=200, param2=0.7, minRadius=0, maxRadius=0
     )
     if circles is None:
         return None
@@ -142,7 +142,10 @@ def simple_fit_line(points):
     vx, vy, x0, y0 = cv2.fitLine(pts, cv2.DIST_L2, 0, 0.01, 0.01)
     return vx,vy,x0,y0
 
-def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coefficients):
+def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coefficients, save_dir=None):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    
     display = base_img.copy()
     #This gives the coordinates of the circles in the camera frame, but only xy coordinates
     matched_centers, detected_circles = user_circle_selection(base_img)
@@ -160,8 +163,8 @@ def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coe
         [109.982, -59.944, 0.0], #botR
         [-59.055,0,0], #h1
         [-43.815,0,0], #h2
-        [29.5148, -51.1431302256, 0.0],
-        [21.9075, -37.9449030788, 0.0]
+        [29.5148, 51.1431302256, 0.0], #j1
+        [21.9075, 37.9449030788, 0.0]  #j2
     ], dtype=np.float32)
 
     
@@ -170,9 +173,9 @@ def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coe
 
     #object_points = object_points[0:6]
     #image_points = image_points[0:6]
-    object_points = object_points[[1,4,6,6,8,9]]
-    image_points = image_points[[1,4,6,6,8,9]]
-    ret, rvec, tvec = cv2.solvePnP(object_points, image_points, camera_matrix, distortion_coefficients, flags=cv2.SOLVEPNP_IPPE)
+    object_points = object_points[[1,4,6,8,9]]
+    image_points = image_points[[1,4,6,8,9]]
+    ret, rvec, tvec = cv2.solvePnP(object_points, image_points, camera_matrix, distortion_coefficients, flags=None)
     
     print("Object points ", object_points)
     print("Image points ", image_points)
@@ -184,7 +187,7 @@ def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coe
 
     #I want to visualize the points I circled to make sure they are correct
     temp_disp_img = base_img.copy()
-    axis = np.float32([[40,0,0], [0,-40,0], [0,0,-40]])
+    axis = np.float32([[40,0,0], [0,40,0], [0,0,-40]])
     origin = np.float32([[0,0,0]])  
     imgpts, _ = cv2.projectPoints(axis, rvec, tvec, camera_matrix, distortion_coefficients)
     origin_imgpt = cv2.projectPoints(origin, rvec, tvec, camera_matrix, distortion_coefficients)
@@ -202,6 +205,91 @@ def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coe
         cv2.circle(temp_disp_img, pt, 2, (0, 0, 255), -1)
     cv2.imshow('Test', temp_disp_img)
     cv2.waitKey(0)
+
+
+    #Now, I will define my own axes just like on the checkerboard.
+    #I need to be able to transform points from the stewart platform base to the camera frame
+    #CREATE transformation matrix from solvePnP
+    R_stew_base_to_camera, _ = cv2.Rodrigues(rvec)
+    T_stew_base_to_camera = np.eye(4)
+    T_stew_base_to_camera[:3,:3] = R_stew_base_to_camera
+    T_stew_base_to_camera[:3, 3] = tvec[:,0]
+    print("Transformation matrix from stewart platform base to camera space")
+    print(T_stew_base_to_camera)
+    #DEFINE POINTS for axes. These are object points and must be transformed to camera frame
+    #On checkerboard it was easy to choose, but now I guess I can choose whatever
+    #Origin
+    p0 = np.array([0.0, 0.0, 0.0, 1.0])
+    #One point along x-axis
+    p1 = np.array([60, 0.0, 0.0, 1.0])
+    #One point along y-axis
+    p2 = np.array([0.0, 60, 0.0, 1.0])
+    #Transform them to camera space. From here I am following what I did in
+    #RobotCalibrationFindTransformationMatrix.py exactly
+    p0_cam_space = T_stew_base_to_camera @ p0
+    p1_cam_space = T_stew_base_to_camera @ p1
+    p2_cam_space = T_stew_base_to_camera @ p2
+    print(f"Coordinates in camera space {p0_cam_space}   {p1_cam_space}   {p2_cam_space}")
+    #Those coordinates are homogeneous so I want to make them just xyz
+    p0_cam_space = p0_cam_space[:3]
+    p1_cam_space = p1_cam_space[:3]
+    p2_cam_space = p2_cam_space[:3]
+
+    #DEFINE VECTORS. Need 3 vectors to make up basis in R3
+    x_axis_cam = p1_cam_space - p0_cam_space
+    y_axis_cam = p2_cam_space - p0_cam_space
+    #The Z can be found by doing cross product of X and Y vectors to get a vector perpendicular to the plane
+    #This ensures it is independent
+    z_axis_cam = np.cross(x_axis_cam, y_axis_cam)
+    print(f"Vectors in camera space {x_axis_cam}   {y_axis_cam}   {z_axis_cam}")
+    #This may not be necessary, but there is something called Gram-Schmidt process
+    #that can be used to make sure you have a true orthonormal basis
+    y_axis_cam = np.cross(z_axis_cam, x_axis_cam)
+    print(f"Vectors in camera space after Gram-Schmidt {x_axis_cam}   {y_axis_cam}   {z_axis_cam}")
+    #These 3 vectors also have to be normalized
+    x_axis_cam_normalized = x_axis_cam / np.linalg.norm(x_axis_cam)
+    y_axis_cam_normalized  = y_axis_cam / np.linalg.norm(y_axis_cam)
+    z_axis_cam_normalized = z_axis_cam / np.linalg.norm(z_axis_cam)
+    print("")
+    print(f"Normalized basis vectors {x_axis_cam_normalized}   {y_axis_cam_normalized}   {z_axis_cam_normalized}")
+    print("")
+
+    #Now build matrix to represent this. It is 3 basis vectors as the first 3 cols and last col is the origin.
+    R_world_to_cam = np.column_stack((x_axis_cam_normalized, y_axis_cam_normalized, z_axis_cam_normalized))
+    world_origin_in_cam = p0_cam_space.reshape(3,1)
+    T_world_to_camera = np.eye(4)
+    T_world_to_camera[:3, :3] = R_world_to_cam
+    T_world_to_camera[:3, 3] = world_origin_in_cam.ravel()
+    print("T_world_to_cam ", T_world_to_camera)
+    T_camera_to_world = np.linalg.inv(T_world_to_camera)
+
+    det = np.linalg.det(R_world_to_cam)
+    print("Determinant R_world_to_cam (should be positive 1 for right handed frame): ", det)
+
+    #Some extra code for optional frame visualization
+    axis_length = 60 * 1  # for visualization
+    world_axes = np.float32([
+        [0, 0, 0],                 # origin
+        [axis_length, 0, 0],       # X
+        [0, axis_length, 0],       # Y
+        [0, 0, axis_length]        # Z
+    ])
+
+    new_basis_viz = visualization(world_axes, base_img, T_world_to_camera, camera_matrix, distortion_coefficients)
+    cv2.imshow("World Axes Visualized", new_basis_viz)
+    cv2.waitKey(0)
+
+    #Save them to a file
+    transformationMatrices = {
+        'T_world_to_camera' : T_world_to_camera,
+        'T_camera_to_world' : T_camera_to_world
+    }
+    
+    with open(os.path.join(save_dir, "TransformationMatricesForStewCalib.pkl"), 'wb') as f:
+        pickle.dump(transformationMatrices, f)
+    np.savetxt(os.path.join(save_dir, 'T_camera_to_world_for_calibration.txt'), T_camera_to_world)
+    np.savetxt(os.path.join(save_dir, 'T_world_to_camera_for_calibration.txt'), T_world_to_camera)
+    
 
 
 
@@ -245,15 +333,18 @@ def main():
     img = cv2.imread(IMAGE_PATH)
     if img is None:
         raise FileNotFoundError(f"Couldn't open '{IMAGE_PATH}'")
-    PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'calibration_params_home_webcam/0', 'calibration_data.pkl'))
-    PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'catkin_ws/src/vs_stewart/calibration_params_home_webcam/0/calibration_data.pkl'))
+    print("image size")
+    print(img)
+    PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'calibration_params_home_webcam/4', 'calibration_data.pkl'))
+    #PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'catkin_ws/src/vs_stewart/calibration_params_home_webcam/0/calibration_data.pkl'))
     print(PARAM_DIR)
     cameraMat1, distCoeffs1, R, T = read_params(PARAM_DIR)
+    OUTPUT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'calibration_params_home_webcam/RobotBaseToCam/'))
     print("cameraMatrix1: ")
     print(cameraMat1)
     print("distortionCoeffs1:")
     print(distCoeffs1)
-    result = camera_robot_calibration_show_clicks(img, cameraMat1, distCoeffs1)
+    result = camera_robot_calibration_show_clicks(img, cameraMat1, distCoeffs1, OUTPUT_DIR)
 
 
 if __name__ == "__main__":

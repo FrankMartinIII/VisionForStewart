@@ -12,9 +12,12 @@ import numpy as np
 
 def camera_robot_calibration(chessboard_img, camera_matrix_left, distortion_coefficients_left, save_dir):
     og_img_copy = chessboard_img.copy()
-    COLS = 8
-    ROWS = 6
-    SQUARE_SIZE = 29 #mm
+    #COLS = 8
+    #ROWS = 6
+    #SQUARE_SIZE = 29 #mm
+    COLS = 6
+    ROWS = 5
+    SQUARE_SIZE = 20
 
     term_criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 1e-5)
 
@@ -116,10 +119,10 @@ def camera_robot_calibration(chessboard_img, camera_matrix_left, distortion_coef
             'T_world_to_camera' : T_world_to_camera,
             'T_camera_to_world' : T_camera_to_world
         }
-        with open(os.path.join(save_dir, "TransformationMatricesForStewCalib.pkl"), 'wb') as f:
-            pickle.dump(transformationMatrices, f)
-        np.savetxt(os.path.join(save_dir, 'T_camera_to_world_for_calibration.txt'), T_camera_to_world)
-        np.savetxt(os.path.join(save_dir, 'T_world_to_camera_for_calibration.txt'), T_world_to_camera)
+        #with open(os.path.join(save_dir, "TransformationMatricesForStewCalib.pkl"), 'wb') as f:
+        #    pickle.dump(transformationMatrices, f)
+        #np.savetxt(os.path.join(save_dir, 'T_camera_to_world_for_calibration.txt'), T_camera_to_world)
+        #np.savetxt(os.path.join(save_dir, 'T_world_to_camera_for_calibration.txt'), T_world_to_camera)
 
         #Some extra code for optional frame visualization
         axis_length = SQUARE_SIZE * 1  # for visualization
@@ -185,7 +188,8 @@ def main():
     PARAM_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..', 'calibration_params_home_webcam/0', 'calibration_data.pkl'))
     print(PARAM_DIR)
     cameraMat1, distCoeffs1, R, T = read_params(PARAM_DIR)
-    img = cv2.imread("2025-10-10-162020.jpg")
+    #img = cv2.imread("2025-10-10-162020.jpg")
+    img = cv2.imread("ChessDetectionLoRez20mm.jpg")
     print("cameraMatrix1: ")
     print(cameraMat1)
     print("distortionCoeffs1:")
