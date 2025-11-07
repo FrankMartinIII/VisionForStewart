@@ -4,7 +4,8 @@ import cv2
 import numpy as np
 
 # ---------- User settings ----------
-IMAGE_PATH = "greenBase5-720p.jpg"
+#IMAGE_PATH = "greenBase5-720p.jpg"
+IMAGE_PATH = "final.png"
 # How many clicks we expect (X1,X2,Y1,Y2,Center)
 LABELS = ["TopLeft", "MidLeft", "BotLeft", "TopRight", "MidRight", "BotRight", "h1", "h2", "j1", "j2"]
 # -----------------------------------
@@ -19,7 +20,7 @@ def detect_circles(img):
     greyimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(greyimg, (1, 1), 3)
     circles = cv2.HoughCircles(
-        blurred, cv2.HOUGH_GRADIENT_ALT, dp=1.5, minDist=3,
+        blurred, cv2.HOUGH_GRADIENT_ALT, dp=1.3, minDist=3,
         param1=200, param2=0.7, minRadius=0, maxRadius=0
     )
     if circles is None:
@@ -155,16 +156,16 @@ def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coe
     #ACTUALLY I could have chosen any known points. It may be better to choose some other ones actually.
     #In mm
     object_points = np.array([
-        [-109.982, 59.944, 0.0], #topL
-        [-109.982, 0.0, 0.0], #midl
-        [-109.982, -59.944 , 0.0], #botL
-        [109.982, 59.944, 0.0], #topR
-        [109.982, 0, 0.0], #midR
-        [109.982, -59.944, 0.0], #botR
-        [-59.055,0,0], #h1
-        [-43.815,0,0], #h2
-        [29.5148, 51.1431302256, 0.0], #j1
-        [21.9075, 37.9449030788, 0.0]  #j2
+        [-109.982, 59.944, 0.5], #topL 0
+        [-109.982, 0.0, 0.0], #midl 1
+        [-109.982, -59.944 , 0.5], #botL 2
+        [109.982, 59.944, 0.5], #topR 3
+        [109.982, 0, 0.0], #midR 4
+        [109.982, -59.944, 0.5], #botR 5
+        [-59.055,0,0], #h1 6
+        [-43.815,0,0], #h2 7
+        [29.5148, -51.1431302256, 0.0], #j1 8
+        [21.9075, -37.9449030788, 0.0]  #j2 9
     ], dtype=np.float32)
 
     
@@ -173,8 +174,10 @@ def camera_robot_calibration_show_clicks(base_img, camera_matrix, distortion_coe
 
     #object_points = object_points[0:6]
     #image_points = image_points[0:6]
-    object_points = object_points[[1,4,6,8,9]]
-    image_points = image_points[[1,4,6,8,9]]
+    object_points = object_points[[0,1,2,3,5,6,7,8]]
+    image_points = image_points[[0,1,2,3,5,6,7,8]]
+    #object_points = object_points[[1,6,7,8]]
+    #image_points = image_points[[1,6,7,8]]
     ret, rvec, tvec = cv2.solvePnP(object_points, image_points, camera_matrix, distortion_coefficients, flags=None)
     
     print("Object points ", object_points)
